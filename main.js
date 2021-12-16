@@ -45,7 +45,7 @@ loader.load("./model/scene.gltf", function (gltf) {
   doll = gltf.scene;
   gltf.scene.position.set(0, -1, 0);
   gltf.scene.scale.set(0.4, 0.4, 0.4);
-  startBtn.innerText = "start";
+  //   startBtn.innerText = "start";
 });
 
 function lookBackward() {
@@ -156,11 +156,11 @@ const players = [
     key: "ArrowUp",
     name: "Player 1",
   },
-//   {
-//     player: player2,
-//     key: "w",
-//     name: "Player 2",
-//   },
+  //   {
+  //     player: player2,
+  //     key: "w",
+  //     name: "Player 2",
+  //   },
 ];
 
 const TIME_LIMIT = 15;
@@ -240,8 +240,24 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+//add controls via hand gestures
+
 const VIDEO_WIDTH = 320;
 const VIDEO_HEIGHT = 250;
+
+let videoWidth,
+  model,
+  videoHeight,
+  rafID,
+  ctx,
+  canvas,
+  fingerLookupIndices = {
+    thumb: [0, 1, 2, 3, 4],
+    indexFinger: [0, 5, 6, 7, 8],
+    middleFinger: [0, 9, 10, 11, 12],
+    ringFinger: [0, 13, 14, 15, 16],
+    pinky: [0, 17, 18, 19, 20],
+  };
 
 async function setupCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -271,12 +287,13 @@ async function setupCamera() {
 async function loadVideo() {
   const video = await setupCamera();
   video.play();
+  startBtn.innerText = "start";
   return video;
 }
 
 async function main() {
-//   await tf.setBackend(state.backend);
-//   model = await handpose.load();
+  await tf.setBackend("webgl");
+  model = await handpose.load();
   let video;
 
   try {
@@ -288,9 +305,7 @@ async function main() {
     throw e;
   }
 
-  //   setupDatGui();
-
-  videoWidth = video.videoWidth;
+  videoWidth = video.videoWidth || VIDEO_WIDTH;
   videoHeight = video.videoHeight;
 
   canvas = document.getElementById("output");
@@ -307,17 +322,88 @@ async function main() {
   ctx.translate(canvas.width, 0);
   ctx.scale(-1, 1);
 
-  // These anchor points allow the hand pointcloud to resize according to its
-  // position in the input.
-  ANCHOR_POINTS = [
-    [0, 0, 0],
-    [0, -VIDEO_HEIGHT, 0],
-    [-VIDEO_WIDTH, 0, 0],
-    [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0],
-  ];
-
+  landmarksRealTime(video);
 }
 
+const landmarksRealTime = async (video) => {
+  async function frameLandmarks() {
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      videoWidth,
+      videoHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    const predictions = await model.estimateHands(video);
+    if (predictions.length > 0) {
+      const result = predictions[0].landmarks;
+      drawKeypoints(result, predictions[0].annotations);
+    }
+    rafID = requestAnimationFrame(frameLandmarks);
+  }
+
+  frameLandmarks();
+};
+
+function drawPath(points, closePath) {
+  const region = new Path2D();
+  region.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) {
+    const point = points[i];
+    region.lineTo(point[0], point[1]);
+  }
+
+  if (closePath) {
+    region.closePath();
+  }
+  ctx.stroke(region);
+}
+
+function drawPoint(y, x, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fill();
+}
+
+function drawKeypoints(keypoints) {
+  const keypointsArray = keypoints;
+
+  for (let i = 0; i < keypointsArray.length; i++) {
+    const y = keypointsArray[i][0];
+    const x = keypointsArray[i][1];
+    drawPoint(x - 2, y - 2, 3);
+  }
+
+  const fingers = Object.keys(fingerLookupIndices);
+  const fingerMidPoint = [];
+  for (let i = 0; i < fingers.length; i++) {
+    const finger = fingers[i];
+    const points = fingerLookupIndices[finger].map((idx) => keypoints[idx]);
+
+    if (i == 0) {
+        console.log(fingerLookupIndices[finger]);
+        console.log(points);
+      if (points[0][1] > points[4][1] + 100) {
+        console.log("up");
+        // reaction.innerText = "👍";
+        // console.log(points[0][1]);
+        // console.log(points[4][1]);
+        // console.log('thumbs up');
+      } else if (points[0][1] < points[4][1] - 49) {
+        console.log("down");
+        // reaction.innerText = "👎";
+        // console.log('thumbs down');
+      } else {
+        // reaction.innerText = "";
+      }
+    }
+    drawPath(points, false);
+  }
+}
 
 navigator.getUserMedia =
   navigator.getUserMedia ||
