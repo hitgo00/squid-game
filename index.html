@@ -25,22 +25,25 @@
 </head>
 
 <body>
-    <h1 class="text">Squid Game</h1>
+    <h1 class="text">Squid Game ⏳</h1>
 
     <div class="modal">
         <div class="modal-content">
             <h1 class="title">Red Light Green Light</h1>
             <p class="info">
-                Top ball is Player 1, bottom ball is Player 2.
-                Player 1 can press <b>Up Arrow</b> to move player 2 can press <b>w</b> to move.
-                Rules are same as it was in squid game.
+                Your aim is to move green ball towards the other end. The catch is you can only move when the doll is
+                facing back.
+                If it sees you moving, the game will end. <br>
+                To move the ball open your palm ✋ <br> Close it ✊ to stop the ball.
+
+
             </p>
             <button class="start-btn">loading...</button>
         </div>
     </div>
 
     <div id="canvas-wrapper">
-        <canvas id="output"></canvas>
+        <canvas id="output" style="z-index: 100;"></canvas>
         <video id="video" playsinline style="
             -webkit-transform: scaleX(-1);
             transform: scaleX(-1);

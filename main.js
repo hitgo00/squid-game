@@ -78,7 +78,7 @@ createCube({ w: 0.2, h: 1.5, d: 1 }, start_position, -0.4);
 createCube({ w: 0.2, h: 1.5, d: 1 }, end_position, 0.4);
 
 class Player {
-  constructor(name = "Player", radius = 0.25, posY = 0, color = 0xffffff) {
+  constructor(name = "Player", radius = 0.25, posY = 2220, color = 0xffffff) {
     const geometry = new THREE.SphereGeometry(radius, 100, 100);
     const material = new THREE.MeshBasicMaterial({ color });
     const player = new THREE.Mesh(geometry, material);
@@ -97,7 +97,7 @@ class Player {
 
   run() {
     if (this.playerInfo.isDead) return;
-    this.playerInfo.velocity = 0.03;
+    this.playerInfo.velocity = 0.1;
   }
 
   stop() {
@@ -113,11 +113,11 @@ class Player {
       DEAD_PLAYERS++;
       loseMusic.play();
       if (DEAD_PLAYERS == players.length) {
-        text.innerText = "Everyone lost!!!";
-        gameStat = "ended";
+        text.innerText = "Game over!!!";
+        gameState = "ended";
       }
       if (DEAD_PLAYERS + SAFE_PLAYERS == players.length) {
-        gameStat = "ended";
+        gameState = "ended";
       }
     }
     if (this.playerInfo.positionX < end_position + 0.7) {
@@ -128,10 +128,10 @@ class Player {
       winMusic.play();
       if (SAFE_PLAYERS == players.length) {
         text.innerText = "Everyone is safe!!!";
-        gameStat = "ended";
+        gameState = "ended";
       }
       if (DEAD_PLAYERS + SAFE_PLAYERS == players.length) {
-        gameStat = "ended";
+        gameState = "ended";
       }
     }
   }
@@ -147,8 +147,8 @@ async function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const player1 = new Player("Player 1", 0.25, 0.3, 0xd1ffc6);
-const player2 = new Player("Player 2", 0.25, -0.3, 0xffcfd2);
+const player1 = new Player("Player 1", 0.25, 0, 0xd1ffc6);
+// const player2 = new Player("Player 2", 0.25, -0.3, 0xffcfd2);
 
 const players = [
   {
@@ -163,7 +163,7 @@ const players = [
   //   },
 ];
 
-const TIME_LIMIT = 15;
+const TIME_LIMIT = 30;
 async function init() {
   await delay(500);
   text.innerText = "Starting in 3";
@@ -178,30 +178,30 @@ async function init() {
   start();
 }
 
-let gameStat = "loading";
+let gameState = "loading";
 
 function start() {
-  gameStat = "started";
+  gameState = "started";
   const progressBar = createCube({ w: 8, h: 0.1, d: 1 }, 0, 0, 0xebaa12);
   progressBar.position.y = 3.35;
   gsap.to(progressBar.scale, { duration: TIME_LIMIT, x: 0, ease: "none" });
   setTimeout(() => {
-    if (gameStat != "ended") {
+    if (gameState != "ended") {
       text.innerText = "Time Out!!!";
       loseMusic.play();
-      gameStat = "ended";
+      gameState = "ended";
     }
   }, TIME_LIMIT * 1000);
-  startDall();
+  startDoll();
 }
 
 let dallFacingBack = true;
-async function startDall() {
+async function startDoll() {
   lookBackward();
   await delay(Math.random() * 1500 + 1500);
   lookForward();
   await delay(Math.random() * 750 + 750);
-  startDall();
+  startDoll();
 }
 
 startBtn.addEventListener("click", () => {
@@ -214,13 +214,13 @@ startBtn.addEventListener("click", () => {
 function animate() {
   renderer.render(scene, camera);
   players.map((player) => player.player.update());
-  if (gameStat == "ended") return;
+  if (gameState == "ended") return;
   requestAnimationFrame(animate);
 }
 animate();
 
 window.addEventListener("keydown", function (e) {
-  if (gameStat != "started") return;
+  if (gameState != "started") return;
   let p = players.find((player) => player.key == e.key);
   if (p) {
     p.player.run();
@@ -342,6 +342,8 @@ const landmarksRealTime = async (video) => {
     if (predictions.length > 0) {
       const result = predictions[0].landmarks;
       drawKeypoints(result, predictions[0].annotations);
+    } else if (gameState === "started") {
+      players[0].player.stop();
     }
     rafID = requestAnimationFrame(frameLandmarks);
   }
@@ -350,6 +352,7 @@ const landmarksRealTime = async (video) => {
 };
 
 function drawPath(points, closePath) {
+  console.log(ctx);
   const region = new Path2D();
   region.moveTo(points[0][0], points[0][1]);
   for (let i = 1; i < points.length; i++) {
@@ -370,6 +373,9 @@ function drawPoint(y, x, r) {
 }
 
 function drawKeypoints(keypoints) {
+  if (gameState !== "started") {
+    return;
+  }
   const keypointsArray = keypoints;
 
   for (let i = 0; i < keypointsArray.length; i++) {
@@ -379,29 +385,22 @@ function drawKeypoints(keypoints) {
   }
 
   const fingers = Object.keys(fingerLookupIndices);
-  const fingerMidPoint = [];
+
+  let isPalmOpen = true;
   for (let i = 0; i < fingers.length; i++) {
     const finger = fingers[i];
     const points = fingerLookupIndices[finger].map((idx) => keypoints[idx]);
 
-    if (i == 0) {
-        console.log(fingerLookupIndices[finger]);
-        console.log(points);
-      if (points[0][1] > points[4][1] + 100) {
-        console.log("up");
-        // reaction.innerText = "👍";
-        // console.log(points[0][1]);
-        // console.log(points[4][1]);
-        // console.log('thumbs up');
-      } else if (points[0][1] < points[4][1] - 49) {
-        console.log("down");
-        // reaction.innerText = "👎";
-        // console.log('thumbs down');
-      } else {
-        // reaction.innerText = "";
-      }
+    if (points[1][1] < points[4][1]) {
+      isPalmOpen = false;
     }
     drawPath(points, false);
+  }
+  console.log(isPalmOpen);
+  if (isPalmOpen) {
+    players[0].player.run();
+  } else {
+    players[0].player.stop();
   }
 }
 
