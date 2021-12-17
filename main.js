@@ -97,7 +97,7 @@ class Player {
 
   run() {
     if (this.playerInfo.isDead) return;
-    this.playerInfo.velocity = 0.1;
+    this.playerInfo.velocity = 0.07;
   }
 
   stop() {
@@ -113,7 +113,7 @@ class Player {
       DEAD_PLAYERS++;
       loseMusic.play();
       if (DEAD_PLAYERS == players.length) {
-        text.innerText = "Game over!!!";
+        text.innerText = "Game over ☠️";
         gameState = "ended";
       }
       if (DEAD_PLAYERS + SAFE_PLAYERS == players.length) {
@@ -127,7 +127,7 @@ class Player {
       SAFE_PLAYERS++;
       winMusic.play();
       if (SAFE_PLAYERS == players.length) {
-        text.innerText = "Everyone is safe!!!";
+        text.innerText = "You made it alive 🥳";
         gameState = "ended";
       }
       if (DEAD_PLAYERS + SAFE_PLAYERS == players.length) {
@@ -173,7 +173,7 @@ async function init() {
   text.innerText = "Starting in 1";
   lookBackward();
   await delay(500);
-  text.innerText = "Gooo!!!";
+  text.innerText = "Run to save your life 🏃";
   bgMusic.play();
   start();
 }
@@ -187,7 +187,7 @@ function start() {
   gsap.to(progressBar.scale, { duration: TIME_LIMIT, x: 0, ease: "none" });
   setTimeout(() => {
     if (gameState != "ended") {
-      text.innerText = "Time Out!!!";
+      text.innerText = "(Your) Time is over!";
       loseMusic.play();
       gameState = "ended";
     }
